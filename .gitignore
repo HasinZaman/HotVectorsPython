@@ -1,0 +1,6 @@
+/target
+/hotvector.egg-info
+/dist
+/build
+/__pycache__
+rust_bytes_api.dll
