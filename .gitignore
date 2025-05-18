@@ -1,5 +1,5 @@
 /target
-/hotvector.egg-info
+/*.egg-info
 /dist
 /build
 /__pycache__

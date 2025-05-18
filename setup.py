@@ -28,7 +28,7 @@ class CustomBuildPy(_build_py):
         super().run()
 
 setup(
-    name="hotvector",
+    name="hot_vectors",
     version="0.1.0",
     py_modules=["HotVector"],
     cmdclass={

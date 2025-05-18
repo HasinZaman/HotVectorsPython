@@ -1,5 +1,4 @@
 use libc::{c_char, c_uchar, c_void, size_t};
-use rkyv::util::AlignedVec;
 use rkyv::{from_bytes, to_bytes, Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 use serde::{Deserialize, Serialize};
 use std::ffi::{CStr, CString};
@@ -12,10 +11,17 @@ type PartitionIdUUid = String;
 struct VectorSerial<A: Clone + Copy>(pub Vec<A>);
 
 #[derive(Archive, Debug, Serialize, RkyvSerialize, Deserialize, RkyvDeserialize, Clone)]
+enum EdgeType{
+    Intra(PartitionIdUUid),
+    Inter
+}
+
+#[derive(Archive, Debug, Serialize, RkyvSerialize, Deserialize, RkyvDeserialize, Clone)]
 enum ReadCmd<A: Archive> {
     Meta { filter: Option<PartitionIdUUid> },
     PartitionVectors { partition_id: PartitionIdUUid },
     ClusterVectors { threshold: A },
+    GraphEdges(EdgeType)
 }
 
 #[derive(Archive, Debug, Serialize, RkyvSerialize, Deserialize, RkyvDeserialize, Clone)]
@@ -38,6 +44,9 @@ enum Data<A: Archive + Clone + Copy> {
         size: usize,
         centroid: VectorSerial<A>,
     },
+
+    InterEdge(A, (String, String), (String, String)),
+    IntraEdge(A, String, String),
 }
 
 #[derive(Archive, Debug, Serialize, RkyvSerialize, Deserialize, RkyvDeserialize, Clone)]
@@ -57,7 +66,8 @@ enum ProtocolMessage<A: Archive + Clone + Copy> {
 
 // Function A: JSON -> RequestCmd<f32> -> rkyv bytes
 #[no_mangle]
-pub extern "C" fn encode_request_cmd(json_ptr: *const c_char, out_len: *mut size_t) -> *mut c_uchar {
+pub extern "C" fn encode_request_cmd(json_ptr: *const c_char, out_len: *mut size_t) -> *mut c_uchar
+{
     unsafe {
         if json_ptr.is_null() || out_len.is_null() {
             return ptr::null_mut();
@@ -78,7 +88,7 @@ pub extern "C" fn encode_request_cmd(json_ptr: *const c_char, out_len: *mut size
         };
 
         *out_len = buffer.len();
-        let out_ptr = libc::malloc(buffer.len()) as *mut c_uchar;
+        let out_ptr: *mut u8 = libc::malloc(buffer.len()) as *mut c_uchar;
         if out_ptr.is_null() {
             return ptr::null_mut();
         }
@@ -110,7 +120,7 @@ pub extern "C" fn decode_protocol_msg(bytes_ptr: *const c_uchar, length: size_t)
             Ok(val) => {
                 val.into_raw()
             },
-            Err(err) => {
+            Err(_err) => {
                 ptr::null_mut()
             }
         }
@@ -128,14 +138,9 @@ pub extern "C" fn free_bytes(ptr: *mut c_void) {
 
 #[no_mangle]
 pub extern "C" fn free_string(ptr: *mut c_char) {
-    println!("Freeing string");
     if !ptr.is_null() {
-        println!("Not null");
         unsafe {
-            println!("Dropping CString");
-            println!("{:?}", CString::from_raw(ptr));
             drop(CString::from_raw(ptr)); // frees memory
         }
     }
-    println!("Done freeing");
 }
