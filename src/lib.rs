@@ -10,21 +10,49 @@ type PartitionIdUUid = String;
 #[derive(Archive, Debug, Serialize, RkyvSerialize, Deserialize, RkyvDeserialize, Clone)]
 struct VectorSerial<A: Clone + Copy>(pub Vec<A>);
 
-#[derive(Archive, Debug, Serialize, RkyvSerialize, Deserialize, RkyvDeserialize, Clone)]
-enum EdgeType{
+#[derive(Archive, Debug, RkyvSerialize, Serialize, RkyvDeserialize, Deserialize, Clone)]
+enum EdgeType {
     Intra(PartitionIdUUid),
-    Inter
+    Inter,
+}
+#[derive(Archive, Debug, RkyvSerialize, Serialize, RkyvDeserialize, Deserialize, Clone)]
+enum SourceType<A: Archive> {
+    VectorId(String),
+    PartitionId(String),
+    ClusterId(A, Option<String>),
 }
 
-#[derive(Archive, Debug, Serialize, RkyvSerialize, Deserialize, RkyvDeserialize, Clone)]
+
+
+#[derive(Archive, Debug, RkyvSerialize, Serialize, RkyvDeserialize, Deserialize, Clone)]
 enum ReadCmd<A: Archive> {
-    Meta { filter: Option<PartitionIdUUid> },
-    PartitionVectors { partition_id: PartitionIdUUid },
-    ClusterVectors { threshold: A },
-    GraphEdges(EdgeType)
+    // todo!() -> replace meta to be able to swap between
+    //  -> Get all Partitions
+    //  -> Get all Clusters
+    //  -> filter to get a subset of data
+    //  -> possible projections
+    Meta {
+        source: SourceType<A>,
+    },
+
+    Vectors {
+        source: SourceType<A>,
+
+        dim_projection: Option<usize>,
+        
+        attribute_projection: Option<(bool, bool)>
+    },
+
+
+    // Vector{ vector_id: VectorIdUUid },
+    // PartitionVectors { partition_id: PartitionIdUUid },
+    // ClusterVectors { threshold: A, cluster_id: Option<ClusterIdUUid>},
+
+    GraphEdges(EdgeType),
 }
 
-#[derive(Archive, Debug, Serialize, RkyvSerialize, Deserialize, RkyvDeserialize, Clone)]
+
+#[derive(Archive, Debug, RkyvSerialize, Serialize, RkyvDeserialize, Deserialize, Clone)]
 enum RequestCmd<A: Clone + Copy + Archive> {
     StartTransaction,
     EndTransaction,
@@ -33,23 +61,22 @@ enum RequestCmd<A: Clone + Copy + Archive> {
     CreateCluster(A),
 }
 
-#[derive(Archive, Debug, Serialize, RkyvSerialize, Deserialize, RkyvDeserialize, Clone)]
+#[derive(Archive, Debug, RkyvSerialize, Serialize, RkyvDeserialize, Deserialize, Clone)]
+
 enum Data<A: Archive + Clone + Copy> {
     ClusterId(String),
     PartitionId(String),
+    VectorId(String),
 
     Vector(Option<String>, Option<VectorSerial<A>>),
-    Meta {
-        id: String,
-        size: usize,
-        centroid: VectorSerial<A>,
-    },
 
     InterEdge(A, (String, String), (String, String)),
     IntraEdge(A, String, String),
+
+    UInt(usize)
 }
 
-#[derive(Archive, Debug, Serialize, RkyvSerialize, Deserialize, RkyvDeserialize, Clone)]
+#[derive(Archive, Debug, RkyvSerialize, Serialize, RkyvDeserialize, Deserialize, Clone)]
 enum ProtocolMessage<A: Archive + Clone + Copy> {
     // Streaming?
     Start,

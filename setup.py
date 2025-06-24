@@ -7,10 +7,10 @@ from setuptools.command.build_py import build_py as _build_py
 class CustomBuildPy(_build_py):
     def run(self):
         # 1. Run Cargo build
-        subprocess.run(["cargo", "build", "--release"], check=True)
+        subprocess.run(["cargo", "build"], check=True)
 
         # 2. Copy DLL from target to root
-        target_dir = os.path.join("target", "release")
+        target_dir = os.path.join("target", "debug")
         if os.name == "nt":
             dll_name = "rust_bytes_api.dll"
         elif os.name == "posix":
@@ -29,8 +29,8 @@ class CustomBuildPy(_build_py):
 
 setup(
     name="hot_vectors",
-    version="0.1.0",
-    py_modules=["HotVector"],
+    version="0.1.1",
+    py_modules=["hot_vectors"],
     cmdclass={
         'build_py': CustomBuildPy,  # use our custom hook
     },
